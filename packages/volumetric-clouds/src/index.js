@@ -20,6 +20,12 @@ function validated(settings){
 export class VolumetricClouds {
  constructor(renderer,options={}){
   if(!renderer?.isWebGLRenderer)throw new TypeError('Expected THREE.WebGLRenderer');
+  const requested=options.maxAreas??128;
+  if(!Number.isInteger(requested)||requested<1||requested>128)throw new RangeError('maxAreas must be an integer between 1 and 128');
+  const gl=renderer.getContext?.();
+  const uniformVectors=gl?gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS):224;
+  // Each area uses two vec4s, one mat3 and a scalar array element (six slots).
+  this.maxAreas=Math.max(1,Math.min(requested,Math.floor((uniformVectors-40)/6)));
   this.renderer=renderer;this.disposed=false;this.time=0;this.areas=new Set();
   this.bounds=(options.bounds??new THREE.Box3(new THREE.Vector3(-32,-8,-32),new THREE.Vector3(32,24,32))).clone();
   const size=this.bounds.getSize(new THREE.Vector3());
@@ -29,13 +35,14 @@ export class VolumetricClouds {
   this.ownsCloudTexture=!options.cloudTexture;
   this.cloudTexture=options.cloudTexture??new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1,THREE.RGBAFormat);
   if(this.ownsCloudTexture)this.cloudTexture.needsUpdate=true;
-  this.sceneTarget=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType});
+  const targetType=renderer.extensions?.has('EXT_color_buffer_float')?THREE.HalfFloatType:THREE.UnsignedByteType;
+  this.sceneTarget=new THREE.WebGLRenderTarget(1,1,{type:targetType});
   this.sceneTarget.depthTexture=new THREE.DepthTexture(1,1,THREE.UnsignedIntType);
-  this.fogTarget=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:false});
-  this.uniforms={cloud:{value:this.cloudTexture},cloudVolume:{value:this.noiseTexture},sceneDepth:{value:this.sceneTarget.depthTexture},maskVolume:{value:this.mask.texture},maskMin:{value:this.bounds.min.clone()},maskSize:{value:size},fogMin:{value:this.bounds.min.clone()},fogMax:{value:this.bounds.max.clone()},lightDirection:{value:new THREE.Vector3(...(options.lightDirection??[-.5,1,.3])).normalize()},inverseVP:{value:new THREE.Matrix4()},time:{value:0},debugMask:{value:false},clearCount:{value:0},clearCenters:{value:Array.from({length:128},()=>new THREE.Vector4())},clearRadii:{value:Array.from({length:128},()=>new THREE.Vector4())},clearRotations:{value:Array.from({length:128},()=>new THREE.Matrix3())},clearStrength:{value:new Float32Array(128)}};
+  this.fogTarget=new THREE.WebGLRenderTarget(1,1,{type:targetType,depthBuffer:false});
+  this.uniforms={cloud:{value:this.cloudTexture},cloudVolume:{value:this.noiseTexture},sceneDepth:{value:this.sceneTarget.depthTexture},maskVolume:{value:this.mask.texture},maskMin:{value:this.bounds.min.clone()},maskSize:{value:size},fogMin:{value:this.bounds.min.clone()},fogMax:{value:this.bounds.max.clone()},lightDirection:{value:new THREE.Vector3(...(options.lightDirection??[-.5,1,.3])).normalize()},inverseVP:{value:new THREE.Matrix4()},time:{value:0},debugMask:{value:false},clearCount:{value:0},clearCenters:{value:Array.from({length:this.maxAreas},()=>new THREE.Vector4())},clearRadii:{value:Array.from({length:this.maxAreas},()=>new THREE.Vector4())},clearRotations:{value:Array.from({length:this.maxAreas},()=>new THREE.Matrix3())},clearStrength:{value:new Float32Array(this.maxAreas)}};
   for(const key of Object.keys(DEFAULTS))if(key!=='resolutionScale')this.uniforms[key]={value:key.endsWith('Tint')?new THREE.Color(this.settings[key]):this.settings[key]};
   this.geometry=new THREE.PlaneGeometry(2,2);this.postCamera=new THREE.Camera();
-  this.fogMaterial=new THREE.ShaderMaterial({uniforms:this.uniforms,glslVersion:THREE.GLSL3,vertexShader:fullscreenVertex,fragmentShader:volumeFragment,depthTest:false,depthWrite:false,toneMapped:false});
+  this.fogMaterial=new THREE.ShaderMaterial({uniforms:this.uniforms,glslVersion:THREE.GLSL3,vertexShader:fullscreenVertex,fragmentShader:volumeFragment.replaceAll('[128]',`[${this.maxAreas}]`).replaceAll('j<128',`j<${this.maxAreas}`),depthTest:false,depthWrite:false,toneMapped:false});
   this.compositeMaterial=new THREE.ShaderMaterial({uniforms:{sceneColor:{value:this.sceneTarget.texture},fogColor:{value:this.fogTarget.texture}},glslVersion:THREE.GLSL3,vertexShader:fullscreenVertex,fragmentShader:compositeFragment,depthTest:false,depthWrite:false});
   this.fogScene=new THREE.Scene();this.fogScene.add(new THREE.Mesh(this.geometry,this.fogMaterial));
   this.compositeScene=new THREE.Scene();this.compositeScene.add(new THREE.Mesh(this.geometry,this.compositeMaterial));
@@ -51,7 +58,7 @@ export class VolumetricClouds {
  }
  getSettings(){return {...this.settings};}
  addArea(options={}){
-  this.assertAlive();if(this.areas.size>=128)throw new RangeError('Maximum 128 clearing areas');
+  this.assertAlive();if(this.areas.size>=this.maxAreas&&!this.areas.has(options))throw new RangeError(`Maximum ${this.maxAreas} clearing areas on this renderer`);
   const area=options instanceof ClearArea?options:new ClearArea(options);this.areas.add(area);return area;
  }
  removeArea(area){this.assertAlive();return this.areas.delete(area);}
