@@ -7,6 +7,7 @@ for(const link of document.querySelectorAll('.language-switch a'))link.addEventL
 const stage=document.querySelector('#cloudDemo');
 const metric=document.querySelector('#demoMetric');
 const errorPanel=document.querySelector('#demoError');
+const mobileGPU=matchMedia('(max-width: 760px), (pointer: coarse)').matches;
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let paused=reducedMotion;
 const pauseButton=document.querySelector('#pauseDemo');
@@ -20,10 +21,11 @@ for(const button of document.querySelectorAll('[data-copy]'))button.onclick=asyn
 };
 
 try{
- const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));renderer.setClearColor(0x87979e);stage.prepend(renderer.domElement);
+ const renderer=new THREE.WebGLRenderer({antialias:!mobileGPU});renderer.setPixelRatio(mobileGPU?1:Math.min(devicePixelRatio,1.25));renderer.setClearColor(0x87979e);stage.prepend(renderer.domElement);
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x87979e);
  const camera=new THREE.PerspectiveCamera(42,1,.1,200);
- const clouds=new VolumetricClouds(renderer,{settings:{density:.85,cameraClear:true,steps:64,resolutionScale:.65,fogTint:'#f2f0e5',shadowTint:'#849ba9',cloudScale:20}});
+ const clouds=new VolumetricClouds(renderer,{maxAreas:8,settings:{density:.85,cameraClear:true,steps:mobileGPU?32:64,resolutionScale:mobileGPU?.4:.65,fogTint:'#f2f0e5',shadowTint:'#849ba9',cloudScale:20}});
+ if(mobileGPU)document.querySelector('#demoQuality').value='low';
  const area=clouds.addArea({shape:'cylinder',position:[0,3,0],radius:4,softness:1.5});
  let outline;let orbit=.55,previous,frames=0,metricStart;
  const names=english?{cylinder:'Cylinder',sphere:'Sphere',ellipsoid:'Ellipsoid',box:'Box'}:{cylinder:'Цилиндр',sphere:'Сфера',ellipsoid:'Эллипсоид',box:'Бокс'};
@@ -57,14 +59,17 @@ try{
   const dt=previous===undefined?0:Math.max(0,Math.min((now-previous)/1000,.1));previous=now;
   if(!paused)orbit+=dt*.045;
   camera.position.set(Math.sin(orbit)*24,19,Math.cos(orbit)*24);camera.lookAt(0,2,0);
-  clouds.render(scene,camera,paused?0:dt);stage.dataset.ready='true';
+  try{clouds.render(scene,camera,paused?0:dt);stage.dataset.ready='true';}
+  catch(error){renderer.setAnimationLoop(null);errorPanel.hidden=false;errorPanel.textContent=t('Ошибка рендера. ','Rendering failed. ')+error.message;metric.textContent=t('ДЕМО НЕДОСТУПНО','DEMO UNAVAILABLE');console.error(error);return;}
   if(metricStart===undefined)metricStart=now;frames++;
   if(now-metricStart>700){metric.textContent=`${Math.round(frames*1000/(now-metricStart))} FPS · ${clouds.getSettings().steps} ${t('ШАГОВ','STEPS')}`;frames=0;metricStart=now;}
  }
+ frame(performance.now());
  const visibilityObserver=new IntersectionObserver(entries=>{
   if(entries[0].isIntersecting){previous=undefined;metricStart=undefined;frames=0;renderer.setAnimationLoop(frame);}
   else renderer.setAnimationLoop(null);
  });visibilityObserver.observe(stage);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)renderer.setAnimationLoop(null);else if(stage.getBoundingClientRect().bottom>0&&stage.getBoundingClientRect().top<innerHeight){previous=undefined;renderer.setAnimationLoop(frame);}});
- addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);resizeObserver.disconnect();visibilityObserver.disconnect();clouds.dispose();outline.geometry.dispose();outline.material.dispose();renderer.dispose();},{once:true});
+ addEventListener('pageshow',()=>{previous=undefined;resize();if(!document.hidden&&stage.getBoundingClientRect().bottom>0&&stage.getBoundingClientRect().top<innerHeight)renderer.setAnimationLoop(frame);});
+ addEventListener('pagehide',event=>{renderer.setAnimationLoop(null);if(event.persisted)return;resizeObserver.disconnect();visibilityObserver.disconnect();clouds.dispose();outline.geometry.dispose();outline.material.dispose();renderer.dispose();});
 }catch(error){errorPanel.hidden=false;errorPanel.textContent=t('Не удалось запустить WebGL2-пример. ','Could not start the WebGL2 demo. ')+error.message;metric.textContent=t('ДЕМО НЕДОСТУПНО','DEMO UNAVAILABLE');console.error(error);}

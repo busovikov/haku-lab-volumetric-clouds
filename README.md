@@ -29,10 +29,10 @@ In repository Settings → Pages, select **GitHub Actions** as the source. The i
 
 ## Package installation
 
-Download `haku-lab-volumetric-clouds-0.1.0.tgz` from the landing page and run:
+Download `haku-lab-volumetric-clouds-0.1.1.tgz` from the landing page and run:
 
 ```sh
-npm install three@0.180.0 ./haku-lab-volumetric-clouds-0.1.0.tgz
+npm install three@0.180.0 ./haku-lab-volumetric-clouds-0.1.1.tgz
 ```
 
 The repository contains only the reusable library, landing page and downloadable artifacts. No game textures, terrain prototype, credentials or local development files are included.
