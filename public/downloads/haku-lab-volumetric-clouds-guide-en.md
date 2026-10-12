@@ -7,7 +7,7 @@ Standalone ESM volumetric clouds for Three.js r180 and WebGL2. Includes clouds, 
 Download the package and run:
 
 ```sh
-npm install three@0.180.0 ./haku-lab-volumetric-clouds-0.1.0.tgz
+npm install three@0.180.0 ./haku-lab-volumetric-clouds-0.1.1.tgz
 ```
 
 Three.js is a peer dependency. TypeScript declarations are included; use matching `@types/three` in TypeScript projects.
@@ -63,7 +63,7 @@ clouds.addArea({
 - `softness`: soft-edge width control; default 1.2.
 - `strength`: clearing strength from 0 to 1; animate this yourself for smooth transitions.
 - `enabled`: set to false to disable an area.
-- Maximum 128 areas per instance.
+- Up to 128 areas per instance. The actual `clouds.maxAreas` limit depends on the GPU uniform budget. Set the `maxAreas` constructor option to reserve fewer shader slots.
 
 ```js
 area.setOptions({ radius: 6, softness: 1.6 });

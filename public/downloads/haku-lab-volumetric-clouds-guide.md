@@ -7,7 +7,7 @@
 Установите локальную папку пакета или подготовленный npm-архив:
 
 ```sh
-npm install three@0.180.0 /path/to/haku-lab-volumetric-clouds-0.1.0.tgz
+npm install three@0.180.0 /path/to/haku-lab-volumetric-clouds-0.1.1.tgz
 ```
 
 Three.js — peer dependency. Библиотека не включает собственную копию Three.js. Типы API входят в пакет; для TypeScript используйте соответствующие `@types/three`.
@@ -77,7 +77,7 @@ clouds.addArea({
 - `softness` — мягкость края; по умолчанию 1.2, соответствует прототипу.
 - `strength` — степень очистки 0…1. Для плавного появления изменяйте её в своём цикле.
 - `enabled = false` отключает область.
-- Максимум 128 областей на экземпляр.
+- До 128 областей на экземпляр; фактический лимит `clouds.maxAreas` зависит от GPU. Опция `maxAreas` ограничивает резерв шейдера.
 
 ```js
 clearing.setOptions({ radius: 6, softness: 1.6 });
