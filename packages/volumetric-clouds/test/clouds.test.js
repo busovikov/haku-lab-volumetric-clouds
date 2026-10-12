@@ -49,3 +49,14 @@ test('public API validates input, culls on update and disposes idempotently',()=
  assert.throws(()=>clouds.setSettings({steps:100}));assert.throws(()=>clouds.setSettings({thickness:100}));
  clouds.dispose();clouds.dispose();assert.throws(()=>clouds.addArea());
 });
+
+// WebGL2 permits devices with only 224 fragment uniform vector slots.
+test('mobile shader fits uniform budget and low-end targets use byte buffers',()=>{
+ const renderer={isWebGLRenderer:true,getContext:()=>({MAX_FRAGMENT_UNIFORM_VECTORS:1,getParameter:()=>224}),extensions:{has:()=>false}};
+ const clouds=new VolumetricClouds(renderer,{maxAreas:128,maskResolution:[8,8,8]});
+ assert.equal(clouds.maxAreas,30);assert(!clouds.fogMaterial.fragmentShader.includes('[128]'));
+ assert(clouds.fogMaterial.fragmentShader.includes('[30]'));
+ assert.equal(clouds.fogTarget.texture.type,THREE.UnsignedByteType);
+ for(let i=0;i<30;i++)clouds.addArea();assert.throws(()=>clouds.addArea(),/Maximum 30/);clouds.dispose();
+ const demo=new VolumetricClouds(renderer,{maxAreas:8,maskResolution:[8,8,8]});assert.equal(demo.maxAreas,8);demo.dispose();
+});
