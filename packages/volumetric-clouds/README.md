@@ -1,0 +1,147 @@
+# @haku-lab/volumetric-clouds
+
+Самостоятельная ESM-библиотека облаков для Three.js r180 / WebGL2. В пакете только объёмные облака, мягкие области очистки и рендер-проход. Земля, модели, интерфейс, localStorage и цикл анимации принадлежат приложению.
+
+## Установка
+
+Установите локальную папку пакета или подготовленный npm-архив:
+
+```sh
+npm install three@0.180.0 /path/to/haku-lab-volumetric-clouds-0.1.0.tgz
+```
+
+Three.js — peer dependency. Библиотека не включает собственную копию Three.js. Типы API входят в пакет; для TypeScript используйте соответствующие `@types/three`.
+
+## Минимальная интеграция
+
+```js
+import * as THREE from 'three';
+import { VolumetricClouds } from '@haku-lab/volumetric-clouds';
+
+// renderer, scene и camera создаются вашим приложением.
+const clouds = new VolumetricClouds(renderer, {
+  settings: {
+    base: 0.55,
+    thickness: 5.5,
+    density: 1.1,
+    fogTint: '#fff1da',
+    shadowTint: '#718baf',
+    cameraClear: true,
+    steps: 64,
+    resolutionScale: 0.65,
+  },
+});
+
+const clearing = clouds.addArea({
+  shape: 'cylinder',
+  position: [0, 2, 0],
+  radius: 4.5,
+  softness: 1.2,
+});
+
+let previous;
+renderer.setAnimationLoop(now => {
+  const dt = previous === undefined ? 0 : Math.max(0, (now - previous) / 1000);
+  previous = now;
+  // Ваши обновления сцены и камеры.
+  clouds.render(scene, camera, dt);
+});
+
+// При закрытии/размонтировании:
+renderer.setAnimationLoop(null);
+clouds.dispose();
+```
+
+`render()` рисует сцену с depth texture, затем туман и итоговую композицию. Вместо отдельного `renderer.render(scene, camera)` вызывайте этот метод. Не вызывайте `update()` с dt дополнительно к `render()` — иначе время анимации увеличится дважды. Цикл анимации и DOM библиотека не создаёт.
+
+## Формы областей
+
+```js
+clouds.addArea({ shape: 'sphere', position: [5, 3, 0], radius: 3 });
+clouds.addArea({
+  shape: 'ellipsoid', position: [-5, 3, 0],
+  radii: [3, 5, 2], heightMode: 'manual',
+});
+clouds.addArea({
+  shape: 'box', position: [0, 3, 8], radii: [3, 4, 2],
+  rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.6, 0)),
+  heightMode: 'manual',
+});
+```
+
+- `radii` — полуразмеры по локальным X/Y/Z. Для бокса `[3, 4, 2]` задаёт размер 6 × 8 × 4.
+- `radius` задаёт радиус X/Z; у сферы — всех осей.
+- `height` — полная высота в режиме `manual`. Центр остаётся на месте, высота расширяется вверх и вниз поровну.
+- `heightMode: 'layer'` по умолчанию автоматически охватывает весь вертикальный слой тумана с запасом для мягкой границы. Применяется к цилиндру, эллипсоиду и боксу, если их локальная Y вертикальна. Для наклона используйте `manual`. Сфера всегда сохраняет заданный радиус.
+- `rotation` — quaternion; все формы поддерживают вращение в режиме `manual`.
+- `softness` — мягкость края; по умолчанию 1.2, соответствует прототипу.
+- `strength` — степень очистки 0…1. Для плавного появления изменяйте её в своём цикле.
+- `enabled = false` отключает область.
+- Максимум 128 областей на экземпляр.
+
+```js
+clearing.setOptions({ radius: 6, softness: 1.6 });
+clearing.position.set(2, 3, 5);
+clouds.removeArea(clearing);
+clouds.clearAreas();
+```
+
+## Привязка к объектам
+
+```js
+const clearing = clouds.addArea({ radius: 4 }).attach(myObject3D);
+clearing.detach(); // сохраняет мировой центр и поворот
+```
+
+Центр привязанной области совпадает с центром мировых bounds объекта. `position` привязанной области — дополнительное смещение в ориентированных осях объекта (в мировых единицах). Поворот объекта учитывается. Радиусы области самостоятельные и не масштабируются автоматически вместе с моделью. Удаление модели из сцены не удаляет область: вызывайте `detach()` или `removeArea()`.
+
+## Настройки облаков и пресеты
+
+```js
+clouds.setSettings({ density: 0.7, cloudScale: 24, detail: 1 });
+const preset = clouds.getSettings();
+localStorage.setItem('my-clouds', JSON.stringify(preset));
+clouds.setSettings(JSON.parse(localStorage.getItem('my-clouds')));
+```
+
+Доступные настройки: `speed`, `base`, `thickness`, `density`, `relief`, `detail`, `cloudScale`, `fogTint`, `shadowTint`, `steps` (8…96), `resolutionScale` (0.1…1), `cameraClear`. Цвета задаются строками `#RRGGBB`. `cameraClear` мягко продолжает области к камере вдоль лучей обзора.
+
+`getSettings()` возвращает копию настроек. Хранение и интерфейс пресетов реализует приложение. Настройки областей в этот снимок не входят.
+
+## Границы, разрешение и ресурсы
+
+```js
+const clouds = new VolumetricClouds(renderer, {
+  bounds: new THREE.Box3(new THREE.Vector3(-64, -8, -64), new THREE.Vector3(64, 24, 64)),
+  maskResolution: [128, 96, 128],
+  lightDirection: [-0.5, 1, 0.3],
+  // cloudTexture: ваша необязательная 2D-текстура оттенка
+});
+```
+
+`bounds` задают мировую область маски и горизонтальные границы облаков. Вся высота слоя (`base`…`base + thickness`) должна помещаться внутри Y этих границ. Границы и разрешение маски фиксируются при создании экземпляра. Каждая область вне границ маски не очищает туман внутри, если её геометрия туда не доходит.
+
+По умолчанию используются процедурный периодический 3D-шум и белая текстура оттенка. Внешние игровые текстуры и сетевые запросы не нужны. Если передан `cloudTexture`, его жизненный цикл принадлежит приложению; библиотека его не освобождает. Внутренние текстуры, материалы, геометрия и render targets освобождаются в `dispose()`.
+
+Размер внутренних render targets автоматически соответствует drawing buffer вашего renderer, с учётом `resolutionScale` для тумана. Обычный resize renderer/camera остаётся в приложении.
+
+## Куллинг и диагностика
+
+В GPU-расчёт прозрачности перед камерой передаются только области, чьи полные bounds с мягким краем пересекают фрустум. CPU-маска дополнительно сохраняет запас 4 мировые единицы для освещения и интерполяции. При изменении видимого набора, формы, положения, ориентации, силы или слоя маска перестраивается. Положение и bounds всех областей всё равно проверяются: без этой дешёвой проверки невозможно определить вход во фрустум.
+
+`clouds.stats`: `areas`, `visibleAreas`, `maskAreas`, `maskUpdated`, `maskUpdateMs`, `fogWidth`, `fogHeight`. `maskUpdateMs` измеряет CPU, а не GPU. Библиотека не управляет куллингом чужих визуальных объектов: стандартный mesh frustum culling выполняет Three.js.
+
+## Ограничения интеграции
+
+Проверено с обычными PerspectiveCamera и OrthographicCamera, стандартной depth texture и WebGLRenderer r180. WebGPU, XR, logarithmic/reversed depth и произвольная цепочка EffectComposer пока не поддерживаются. Прозрачные материалы без записи depth не блокируют туман так же, как непрозрачные поверхности. Это полноэкранный проход с raymarching, а не mesh-облако.
+
+`render(scene, camera, dt, outputTarget)` может записать композицию в переданный render target. Предыдущее состояние target, clear color, autoClear, viewport и scissor восстанавливается. Вывод в экран стандартен; для сложного postprocessing потребуется отдельный адаптер pass.
+
+## Проверка в исходном проекте
+
+```sh
+npm test --prefix packages/volumetric-clouds
+npm run dev -- --port 5179
+```
+
+Откройте `/examples/library.html`: независимый пример импортирует только пакет и Three.js. Визуальные контуры форм принадлежат примеру, а не библиотеке. Основной прототип остаётся отдельно для сравнения; его редактор объектов и пресеты не включены в npm-пакет.
