@@ -1,14 +1,27 @@
 {
- "name":"@haku-lab/volumetric-clouds",
- "version":"0.1.0",
- "description":"Three.js volumetric clouds with independent soft clearing volumes",
- "type":"module",
- "main":"./src/index.js",
- "types":"./index.d.ts",
- "exports":{".":{"types":"./index.d.ts","import":"./src/index.js"}},
- "files":["src","index.d.ts","README.md"],
- "sideEffects":false,
- "peerDependencies":{"three":">=0.180.0 <0.181.0"},
- "scripts":{"test":"node --test test/*.test.js"},
- "license":"UNLICENSED"
+  "name": "@haku-lab/volumetric-clouds",
+  "version": "0.1.1",
+  "description": "Three.js volumetric clouds with independent soft clearing volumes",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "index.d.ts",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "three": ">=0.180.0 <0.181.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "license": "UNLICENSED"
 }
