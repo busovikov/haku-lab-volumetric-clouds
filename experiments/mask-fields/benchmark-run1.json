@@ -1,0 +1,94 @@
+{
+  "version": "mask-fields-experiment",
+  "timestamp": "2026-10-13T14:28:58.924Z",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "renderer": "WebKit WebGL",
+  "width": 790,
+  "height": 600,
+  "settings": {
+    "speed": 1,
+    "base": 0.2,
+    "thickness": 6,
+    "density": 0.75,
+    "relief": 0.85,
+    "detail": 0.7,
+    "cloudScale": 22,
+    "fogTint": "#fff1da",
+    "shadowTint": "#718baf",
+    "steps": 64,
+    "resolutionScale": 0.65,
+    "cameraClear": false
+  },
+  "fieldResolution": [
+    64,
+    24,
+    64
+  ],
+  "staticColorBakeMs": 20.800000190734863,
+  "gpuTimerAvailable": true,
+  "rows": [
+    {
+      "mode": "Обычный туман",
+      "fps": 119.99999999999999,
+      "frameMs": 8.333333333333334,
+      "cpuMs": 0.21833340326944986,
+      "gpuMedianMs": 4.816625,
+      "gpuP95Ms": 7.921166,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Общая маска очистки",
+      "fps": 120.09607686148932,
+      "frameMs": 8.326666666666657,
+      "cpuMs": 0.17083326975504556,
+      "gpuMedianMs": 5.051417,
+      "gpuP95Ms": 7.735541,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Очистка + цвет",
+      "fps": 119.88011988011968,
+      "frameMs": 8.341666666666681,
+      "cpuMs": 0.21583343346913655,
+      "gpuMedianMs": 5.010958,
+      "gpuP95Ms": 8.168125,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Очистка + цвет + поле света",
+      "fps": 120.5182283820427,
+      "frameMs": 8.297500000000007,
+      "cpuMs": 0.22083336512247723,
+      "gpuMedianMs": 5.667416,
+      "gpuP95Ms": 8.937499,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Все поля + очистка до камеры",
+      "fps": 119.49810794662409,
+      "frameMs": 8.36833333333334,
+      "cpuMs": 0.2074999968210856,
+      "gpuMedianMs": 5.432374,
+      "gpuP95Ms": 8.810582,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Сравнение: 3 света напрямую",
+      "fps": 120.5182283820427,
+      "frameMs": 8.297500000000007,
+      "cpuMs": 0.17666667302449543,
+      "gpuMedianMs": 5.137584,
+      "gpuP95Ms": 7.506124,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Только обновление поля света",
+      "fps": 121.1754013935172,
+      "frameMs": 8.252499999999994,
+      "cpuMs": 0.1541666587193807,
+      "gpuMedianMs": 0.651499,
+      "gpuP95Ms": 2.280999,
+      "gpuSamples": 120
+    }
+  ]
+}

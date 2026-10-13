@@ -1,0 +1,138 @@
+{
+  "version": "mask-fields-experiment",
+  "timestamp": "2026-10-13T14:32:01.374Z",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "renderer": "WebKit WebGL",
+  "width": 790,
+  "height": 600,
+  "settings": {
+    "speed": 1,
+    "base": 0.2,
+    "thickness": 6,
+    "density": 0.75,
+    "relief": 0.85,
+    "detail": 0.7,
+    "cloudScale": 22,
+    "fogTint": "#fff1da",
+    "shadowTint": "#718baf",
+    "steps": 64,
+    "resolutionScale": 0.65,
+    "cameraClear": false
+  },
+  "fieldResolution": [
+    64,
+    24,
+    64
+  ],
+  "staticColorBakeMs": 17.699999809265137,
+  "gpuTimerAvailable": true,
+  "rows": [
+    {
+      "mode": "Обычный туман",
+      "options": {
+        "name": "Обычный туман",
+        "baseline": true
+      },
+      "fps": 120.51822838204313,
+      "frameMs": 8.297499999999976,
+      "cpuMs": 0.1708333651224772,
+      "gpuMedianMs": 4.890166,
+      "gpuP95Ms": 6.86975,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Общая маска очистки",
+      "options": {
+        "name": "Общая маска очистки",
+        "clear": true,
+        "tint": false,
+        "lights": false,
+        "camera": false
+      },
+      "fps": 120.5061257280575,
+      "frameMs": 8.298333333333357,
+      "cpuMs": 0.1699999968210856,
+      "gpuMedianMs": 4.803375,
+      "gpuP95Ms": 7.205041,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Очистка + цвет",
+      "options": {
+        "name": "Очистка + цвет",
+        "clear": true,
+        "tint": true,
+        "lights": false,
+        "camera": false
+      },
+      "fps": 120.5303334672561,
+      "frameMs": 8.296666666666654,
+      "cpuMs": 0.16083333492279053,
+      "gpuMedianMs": 5.368624,
+      "gpuP95Ms": 7.326624,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Очистка + цвет + поле света",
+      "options": {
+        "name": "Очистка + цвет + поле света",
+        "clear": true,
+        "tint": true,
+        "lights": true,
+        "camera": false
+      },
+      "fps": 120.51822838204225,
+      "frameMs": 8.297500000000037,
+      "cpuMs": 0.18333329359690348,
+      "gpuMedianMs": 5.385541,
+      "gpuP95Ms": 7.467791,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Все поля + очистка до камеры",
+      "options": {
+        "name": "Все поля + очистка до камеры",
+        "clear": true,
+        "tint": true,
+        "lights": true,
+        "camera": true
+      },
+      "fps": 120.50612572805838,
+      "frameMs": 8.298333333333296,
+      "cpuMs": 0.1691666841506958,
+      "gpuMedianMs": 5.217541,
+      "gpuP95Ms": 7.040333,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Сравнение: 3 света напрямую",
+      "options": {
+        "name": "Сравнение: 3 света напрямую",
+        "clear": true,
+        "tint": true,
+        "lights": true,
+        "camera": false,
+        "direct": true
+      },
+      "fps": 119.99999999999999,
+      "frameMs": 8.333333333333334,
+      "cpuMs": 0.16166666348775227,
+      "gpuMedianMs": 5.259624,
+      "gpuP95Ms": 7.016874,
+      "gpuSamples": 120
+    },
+    {
+      "mode": "Только обновление поля света",
+      "options": {
+        "name": "Только обновление поля света",
+        "lightOnly": true
+      },
+      "fps": 120.02400480096072,
+      "frameMs": 8.33166666666663,
+      "cpuMs": 0.10916666189829509,
+      "gpuMedianMs": 0.184457,
+      "gpuP95Ms": 0.748625,
+      "gpuSamples": 120
+    }
+  ]
+}
