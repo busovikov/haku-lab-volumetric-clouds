@@ -1,0 +1,1 @@
+export const CLOUD_PRESETS=Object.freeze(Object.fromEntries(Object.entries({speed:{steps:32,resolutionScale:.4},balance:{steps:48,resolutionScale:.5},quality:{steps:64,resolutionScale:.65},ultra:{steps:96,resolutionScale:1}}).map(([key,value])=>[key,Object.freeze(value)])));
