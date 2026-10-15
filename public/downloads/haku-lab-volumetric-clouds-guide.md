@@ -7,7 +7,7 @@
 Установите локальную папку пакета или подготовленный npm-архив:
 
 ```sh
-npm install three@0.180.0 /path/to/haku-lab-volumetric-clouds-0.1.1.tgz
+npm install three@0.180.0 /path/to/haku-lab-volumetric-clouds-0.2.0.tgz
 ```
 
 Three.js — peer dependency. Библиотека не включает собственную копию Three.js. Типы API входят в пакет; для TypeScript используйте соответствующие `@types/three`.
@@ -145,3 +145,32 @@ npm run dev -- --port 5179
 ```
 
 Откройте `/examples/library.html`: независимый пример импортирует только пакет и Three.js. Визуальные контуры форм принадлежат примеру, а не библиотеке. Основной прототип остаётся отдельно для сравнения; его редактор объектов и пресеты не включены в npm-пакет.
+
+## 0.2.0 — общие маски, цвет, локальный свет и пресеты
+
+Прежний VolumetricClouds сохранён. Новый MaskFieldClouds принимает те же параметры и effects; не создаёт землю, объекты, интерфейс или цикл анимации.
+
+```js
+import { MaskFieldClouds, CLOUD_PRESETS } from '@haku-lab/volumetric-clouds';
+const clouds = new MaskFieldClouds(renderer);
+clouds.setPreset('balance');
+clouds.addArea({shape: 'box', position: [0, 3, 0], radii: [2, 6, 2]});
+const tint = clouds.addTint({shape: 'sphere', position: [6, 3, 0],
+  radius: 7, color: '#67d1af', softness: 2});
+const light = clouds.addLight({position: [0, 3, 0], radius: 8,
+  color: '#73daff', intensity: 2});
+// Move light.position / tint.position in your own loop.
+clouds.render(scene, camera, deltaSeconds, optionalOutputTarget);
+// Teardown: clouds.dispose();
+```
+
+- addTint(options) возвращает TintArea: формы, поворот и привязка как у ClearArea плюс color (THREE.Color). Есть removeTint / clearTints. Цвет областей смешивается взвешенным средним в линейном пространстве, сила — максимумом. Шейдер умножает цвет облаков на оттенок с коэффициентом смешивания 0.82.
+- addLight(options) возвращает FogLight: position (Vector3), color (THREE.Color), radius > 0, intensity >= 0, enabled. Есть setOptions, removeLight / clearLights. Анимацией управляет приложение. Библиотека не нормализует суммарную энергию; это делает только демо при выборе количества света.
+- setEffects({clearing, tint, lights, lightMode, lightRefreshHz}) / getEffects(). Булевы параметры по умолчанию true. lightMode: 'atlas' (по умолчанию) или 'direct'. lightRefreshHz: 0 (каждый кадр с изменениями), 15 или 30 Гц. Неподвижный свет повторно не считается. При низкой частоте свет может отставать.
+- setPreset(name) на обоих классах: speed — 32 шага / 40%; balance — 48 / 50%; quality — 64 / 65%; ultra — 96 / 100%. CLOUD_PRESETS экспортирует эти настройки. MaskFieldClouds также выбирает атлас с обновлением каждый изменившийся кадр. Остальные настройки сохраняются. Для своих значений сохраняйте getSettings() и getEffects() отдельно. Комбинация Balance — рекомендуемый компромисс, отдельно не измерялась.
+
+До 128 областей очистки, 128 цветовых областей и 32 источников. Формы очистки/цвета: цилиндр, сфера, эллипсоид, бокс. Очистка объединяется максимумом в R8 3D-текстуре. Маски перестраиваются при изменении областей; консервативный набор очистки также зависит от видимости. Анимированные области очистки/цвета требуют CPU-перестроения. Свет отсекается по фрустуму и границам облаков. Атлас света — фиксированная сетка 64×24×64; maskResolution отдельно задаёт сетку очистки и цвета.
+
+Локальный свет приближённый, с квадратом радиального затухания, без локальных теней. Направленное самозатенение облаков сохранено. Атлас RGBA8 ограничивает яркость значением 16 на канал; превышение обрезается. Ограничивайте суммарную энергию либо используйте direct. Интерполяция/квантизация отличаются от прямого расчёта. Очистка до камеры использует выборку маски на шаг и обратное накопление максимума; очень тонкие области могут пропускаться при малом числе шагов.
+
+Статистика дополнена tintAreas, tintUpdated, tintUpdateMs, lights, visibleLights, lightFieldUpdated. Ресурсы принадлежат экземпляру; dispose() можно вызывать повторно. Правила владения внешней cloudTexture не изменены. Пакету не нужны внешние ресурсы и код демо.
