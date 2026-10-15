@@ -19,9 +19,28 @@ for(const sphere of COLOR_SPHERES){const mesh=new THREE.Mesh(new THREE.SphereGeo
 const markers=Array.from({length:MAX_LIGHTS},(_,i)=>{const mesh=new THREE.Mesh(new THREE.SphereGeometry(.22,12,8),new THREE.MeshBasicMaterial({color:LIGHT_COLORS[i%LIGHT_COLORS.length],depthWrite:false}));outlines.add(mesh);return mesh;});
 let paused=false,last,clock=0,frames=0,intervalStart=performance.now(),fps=0,bench=null,report=null,generation=0;
 const current=()=>({...Object.fromEntries(['clear','tint','lights','camera','direct'].map(k=>[k,document.querySelector('#'+k).checked])),count:Number(document.querySelector('#count').value),refreshHz:Number(document.querySelector('#refresh').value)});
-function settings(){const q=document.querySelector('#quality').value;const s=q==='high'?{steps:96,resolutionScale:1}:q==='low'?{steps:32,resolutionScale:.4}:{steps:64,resolutionScale:.65};clouds.setSettings(s);baseline.setSettings(s);}
-if(matchMedia('(max-width:760px)').matches)document.querySelector('#quality').value='low';settings();
-document.querySelector('#quality').onchange=settings;
+const presets={
+ low:{name:'Скорость',steps:32,resolutionScale:.4},
+ balance:{name:'Баланс',steps:48,resolutionScale:.5},
+ medium:{name:'Качество',steps:64,resolutionScale:.65},
+ high:{name:'Ультра',steps:96,resolutionScale:1},
+};
+function settings(){
+ const s={steps:Number(document.querySelector('#steps').value),resolutionScale:Number(document.querySelector('#scale').value)};
+ clouds.setSettings(s);baseline.setSettings(s);
+ const preset=Object.entries(presets).find(([,p])=>p.steps===s.steps&&p.resolutionScale===s.resolutionScale&&!document.querySelector('#direct').checked&&document.querySelector('#refresh').value==='0');
+ document.querySelector('#quality').value=preset?.[0]??'custom';
+ document.querySelector('#preset-description').textContent=`${preset?.[1].name??'Свои настройки'} · шаги: ${s.steps} · ${Math.round(s.resolutionScale*100)}% · ${document.querySelector('#direct').checked?'прямой свет':('световая маска, '+(Number(document.querySelector('#refresh').value)?document.querySelector('#refresh').value+' Гц':'каждый кадр'))}`;
+}
+function applyPreset(){
+ const preset=presets[document.querySelector('#quality').value];if(!preset)return;
+ document.querySelector('#steps').value=String(preset.steps);document.querySelector('#scale').value=String(preset.resolutionScale);
+ document.querySelector('#direct').checked=false;document.querySelector('#refresh').value='0';
+ settings();clouds.resetLightSchedule();
+}
+document.querySelector('#quality').value=matchMedia('(max-width:760px)').matches?'low':'balance';applyPreset();
+document.querySelector('#quality').onchange=applyPreset;
+for(const id of ['steps','scale','direct','refresh'])document.querySelector('#'+id).addEventListener('change',settings);
 document.querySelector('#pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Продолжить':'Пауза';};
 const controls=[...document.querySelectorAll('.panel input,.panel select,#pause')];
 function setControls(disabled){for(const el of controls)el.disabled=disabled;document.querySelector('#benchmark').disabled=disabled;}
@@ -55,7 +74,7 @@ renderer.setAnimationLoop(now=>{
  if(measured){tag.updated=!mode.baseline&&clouds.lightFieldUpdated;timer.end();const row=bench.rows[bench.index];row.cpu.push(performance.now()-cpuStart);row.frame.push(dt*1000);row.elapsed+=dt*1000;if(tag.updated)row.updates++;row.fogWidth=(mode.baseline?baseline:clouds).stats.fogWidth;row.fogHeight=(mode.baseline?baseline:clouds).stats.fogHeight;}
  for(let i=0;i<MAX_LIGHTS;i++){markers[i].visible=i<clouds.lights.count;if(markers[i].visible)markers[i].position.copy(clouds.lights.uniforms.positions.value[i]);}
  frames++;if(now-intervalStart>500){fps=frames*1000/(now-intervalStart);frames=0;intervalStart=now;}
- readout.textContent=`${fps.toFixed(0)} FPS · ${clouds.stats.fogWidth} × ${clouds.stats.fogHeight}\n64 × 24 × 64 voxels / 3 поля\n13 кубов · 3 цветовые сферы · источников: ${clouds.lights.count}\nGPU timer: ${timer.ext?'доступен':'недоступен'}`;
+ readout.textContent=`${fps.toFixed(0)} FPS · ${clouds.stats.fogWidth} × ${clouds.stats.fogHeight}\nШаги: ${clouds.settings.steps} · ${Math.round(clouds.settings.resolutionScale*100)}%\n64 × 24 × 64 voxels / 3 поля\n13 кубов · 3 цветовые сферы · источников: ${clouds.lights.count}\nGPU timer: ${timer.ext?'доступен':'недоступен'}`;
  if(bench){status.textContent=`${bench.index+1}/${bench.modes.length}: ${mode.name}\n${bench.frame<WARMUP_FRAMES?'Прогрев':'Замер'} ${bench.frame<WARMUP_FRAMES?bench.frame:bench.frame-WARMUP_FRAMES}/${bench.frame<WARMUP_FRAMES?WARMUP_FRAMES:MEASURE_FRAMES}`;if(++bench.frame>=WARMUP_FRAMES+MEASURE_FRAMES){bench.index++;bench.frame=0;}}
  if(shaderFailed){renderer.setAnimationLoop(null);setControls(false);}
 });

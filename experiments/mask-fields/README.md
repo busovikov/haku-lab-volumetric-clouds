@@ -13,6 +13,10 @@ The field grid is 64 × 24 × 64 in world bounds [-24,0,-24] to [24,8,24]. The l
 
 Static clearing/tint fields are baked once. Moving lights update only the light field. An application that animates tint/clearing geometry must also rebuild the corresponding fields; this experiment deliberately measures static boxes/spheres and dynamic lights.
 
+## Quality presets
+
+The demo starts with **Balance** on desktop and **Speed** on narrow screens. Presets set raymarch steps / cloud render scale: Speed 32 / 40%, Balance 48 / 50%, Quality 64 / 65%, Ultra 96 / 100%. All select the shared light atlas, updated every frame. Selecting a preset preserves light count, clearing, tint, camera clearing and outlines. Manual quality/light-method/refresh changes show a matching preset or Custom; exact steps and scale are available in the expandable controls. Benchmark cases retain their own settings and restore the selected configuration after completion/cancellation. The combined Balance settings are a suggested tradeoff, not a separately measured benchmark result.
+
 ## Benchmark
 
 Click the compare button. 23 modes run with a fixed camera, drawing-buffer dimensions and deterministic cloud/light phase sequence. Each uses 60 warmup and 360 measured frames. Repeat runs reverse the mode order. The light matrix uses 64 steps at 65% scale; quality cases explicitly override one setting at a time. Outlines/markers and camera clearing are disabled during measurement. A hidden tab or resized viewport cancels the run.
