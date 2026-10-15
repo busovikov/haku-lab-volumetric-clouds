@@ -7,7 +7,7 @@ Standalone ESM volumetric clouds for Three.js r180 and WebGL2. Includes clouds, 
 Download the package and run:
 
 ```sh
-npm install three@0.180.0 ./haku-lab-volumetric-clouds-0.1.1.tgz
+npm install three@0.180.0 ./haku-lab-volumetric-clouds-0.2.0.tgz
 ```
 
 Three.js is a peer dependency. TypeScript declarations are included; use matching `@types/three` in TypeScript projects.
@@ -134,3 +134,32 @@ npm test
 ```
 
 Open `http://127.0.0.1:5179/examples/library.html`. The example owns its visual outlines; the library does not create them.
+
+## 0.2.0 — shared masks, tint, local lights and quality presets
+
+The existing VolumetricClouds API is retained. MaskFieldClouds accepts the same options plus effects; it creates no terrain, objects, UI or animation loop.
+
+```js
+import { MaskFieldClouds, CLOUD_PRESETS } from '@haku-lab/volumetric-clouds';
+const clouds = new MaskFieldClouds(renderer);
+clouds.setPreset('balance');
+clouds.addArea({shape: 'box', position: [0, 3, 0], radii: [2, 6, 2]});
+const tint = clouds.addTint({shape: 'sphere', position: [6, 3, 0],
+  radius: 7, color: '#67d1af', softness: 2});
+const light = clouds.addLight({position: [0, 3, 0], radius: 8,
+  color: '#73daff', intensity: 2});
+// Move light.position / tint.position in your own loop.
+clouds.render(scene, camera, deltaSeconds, optionalOutputTarget);
+// Teardown: clouds.dispose();
+```
+
+- addTint(options) returns TintArea: all ClearArea shape, rotation and attachment options, plus color (mutable THREE.Color). removeTint(area) / clearTints(). Colors blend as a weighted linear-color average; alpha is maximum influence. The shader multiplies cloud color by the tint with a blend factor of 0.82.
+- addLight(options) returns FogLight: position (mutable Vector3), color (THREE.Color), radius > 0, intensity >= 0, enabled. setOptions, removeLight(light), clearLights(). Move lights in your application. The library does not normalize total energy; only the landing demo does when switching light count.
+- setEffects({clearing, tint, lights, lightMode, lightRefreshHz}) / getEffects(). Booleans default true. lightMode: 'atlas' (default) or 'direct'. lightRefreshHz: 0 (each changed frame), 15 or 30. Static lighting is reused. Lower rates can lag fast lights.
+- setPreset(name), available on both cloud classes: speed 32 steps / 40%; balance 48 / 50%; quality 64 / 65%; ultra 96 / 100%. CLOUD_PRESETS exports these immutable settings. MaskFieldClouds presets also select atlas lighting updated each changed frame. Other settings are preserved. Persist getSettings() and getEffects() separately. The combined Balance preset is a suggested tradeoff, not a separately measured benchmark result.
+
+Limits for MaskFieldClouds: 128 clearing areas, 128 tint areas, 32 lights. All clearing/tint shapes support cylinder, sphere, ellipsoid and box. Clearing is a max-union R8 3D texture. Static masks rebuild only when their inputs change; the conservative clearing candidate set also changes with camera visibility. Moving clearing/tint regions requires a CPU rebuild, so batching is not free. Lights are filtered by camera frustum and cloud bounds. The light atlas is a fixed 64×24×64 grid; maskResolution separately sets clearing/tint resolution.
+
+Local lights use squared radial falloff without local shadows. Directional cloud self-shadowing remains separate. RGBA8 atlas interpolation/quantization approximates direct lighting; irradiance above 16 per channel clamps. Keep summed energy within this range or select direct. Soft cameraClear uses one mask sample per ray step and a reverse prefix maximum; very thin regions can be missed with few steps.
+
+Stats add tintAreas, tintUpdated, tintUpdateMs, lights, visibleLights, lightFieldUpdated. Resources are instance-owned and dispose() is idempotent. External cloudTexture ownership is unchanged. No external assets or demo code are required by the package.
