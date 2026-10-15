@@ -3,6 +3,8 @@ import {ClearArea} from '../../packages/volumetric-clouds/src/index.js';
 import {VolumeMask} from '../../packages/volumetric-clouds/src/volume-mask.js';
 import {fullscreenVertex} from '../../packages/volumetric-clouds/src/shaders.js';
 
+export const MAX_LIGHTS=32;
+export const LIGHT_COLORS=['#ffb26f','#73daff','#dc98ff','#91ffa7','#ff82c7','#ffe681'];
 export const RESOLUTION=[64,24,64];
 export const COLOR_SPHERES=[
  {position:[-9,3,-4],radius:7,color:'#ff785f'},
@@ -31,7 +33,7 @@ uniform vec3 fieldResolution;
 vec3 atlasSlice(vec2 p,float z){
  vec2 tiles=vec2(mod(z,8.),floor(z/8.));
  vec2 pixel=tiles*fieldResolution.xy+p+vec2(.5);
- return texture(lightAtlas,pixel/(fieldResolution.xy*8.)).rgb*8.;
+ return texture(lightAtlas,pixel/(fieldResolution.xy*8.)).rgb*16.;
 }
 vec3 lightingField(vec3 p){
  vec3 uv=(p-maskMin)/maskSize;
@@ -41,21 +43,28 @@ vec3 lightingField(vec3 p){
 }`;
 export class LightField {
  constructor(bounds){
+  this.count=16;this.revision=0;
   this.resolution=new THREE.Vector3(...RESOLUTION);
   this.target=new THREE.WebGLRenderTarget(RESOLUTION[0]*8,RESOLUTION[1]*8,{type:THREE.UnsignedByteType,depthBuffer:false,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
-  this.uniforms={fieldMin:{value:bounds.min.clone()},fieldSize:{value:bounds.getSize(new THREE.Vector3())},positions:{value:Array.from({length:3},()=>new THREE.Vector4())},colors:{value:Array.from({length:3},()=>new THREE.Vector4())}};
+  this.uniforms={fieldMin:{value:bounds.min.clone()},fieldSize:{value:bounds.getSize(new THREE.Vector3())},lightCount:{value:this.count},positions:{value:Array.from({length:MAX_LIGHTS},()=>new THREE.Vector4())},colors:{value:Array.from({length:MAX_LIGHTS},()=>new THREE.Vector4())}};
   this.geometry=new THREE.PlaneGeometry(2,2);
   this.material=new THREE.ShaderMaterial({glslVersion:THREE.GLSL3,vertexShader:fullscreenVertex,depthTest:false,depthWrite:false,toneMapped:false,uniforms:this.uniforms,fragmentShader:`
-   in vec2 vUv;out vec4 fragColor;uniform vec3 fieldMin,fieldSize;uniform vec4 positions[3],colors[3];
-   void main(){vec2 pixel=floor(gl_FragCoord.xy);vec2 tile=floor(pixel/vec2(64.,24.));float z=tile.x+tile.y*8.;vec3 cell=vec3(mod(pixel.x,64.),mod(pixel.y,24.),z);vec3 p=fieldMin+(cell+.5)/vec3(64.,24.,64.)*fieldSize;vec3 light=vec3(0.);for(int i=0;i<3;i++){float d=distance(p,positions[i].xyz)/positions[i].w;float a=max(0.,1.-d);light+=colors[i].rgb*colors[i].w*a*a;}fragColor=vec4(light/8.,1.);}`});
+   in vec2 vUv;out vec4 fragColor;uniform vec3 fieldMin,fieldSize;uniform int lightCount;uniform vec4 positions[${MAX_LIGHTS}],colors[${MAX_LIGHTS}];
+   void main(){vec2 pixel=floor(gl_FragCoord.xy);vec2 tile=floor(pixel/vec2(64.,24.));float z=tile.x+tile.y*8.;vec3 cell=vec3(mod(pixel.x,64.),mod(pixel.y,24.),z);vec3 p=fieldMin+(cell+.5)/vec3(64.,24.,64.)*fieldSize;vec3 light=vec3(0.);for(int i=0;i<${MAX_LIGHTS};i++){if(i>=lightCount)break;float d=distance(p,positions[i].xyz)/positions[i].w;float a=max(0.,1.-d);light+=colors[i].rgb*colors[i].w*a*a;}fragColor=vec4(light/16.,1.);}`});
   this.scene=new THREE.Scene();this.scene.add(new THREE.Mesh(this.geometry,this.material));this.camera=new THREE.Camera();
  }
+ setCount(count){
+  if(!Number.isInteger(count)||count<1||count>MAX_LIGHTS)throw new RangeError(`Light count must be 1–${MAX_LIGHTS}`);
+  if(count!==this.count){this.count=count;this.uniforms.lightCount.value=count;this.revision++;}
+ }
  updateLights(time){
-  const colors=['#ffb26f','#73daff','#dc98ff'];
-  for(let i=0;i<3;i++){
-   const a=time*(.23+i*.07)+i*2.1;
-   this.uniforms.positions.value[i].set(Math.cos(a)*(8+i),2.8+Math.sin(time*.53+i)*1.8,Math.sin(a)*(9-i),8);
-   const c=new THREE.Color(colors[i]);this.uniforms.colors.value[i].set(c.r,c.g,c.b,3.5);
+  for(let i=0;i<this.count;i++){
+   const a=time*(.23+(i%7)*.07)+i*2.399963;
+   const ring=7+(i%5)*2.5;
+   this.uniforms.positions.value[i].set(Math.cos(a)*ring,2.8+Math.sin(time*(.53+(i%3)*.11)+i)*1.8,Math.sin(a)*(ring+1),8);
+   const c=new THREE.Color(LIGHT_COLORS[i%LIGHT_COLORS.length]);
+   // Keep total energy constant when comparing counts; avoid atlas clipping.
+   this.uniforms.colors.value[i].set(c.r,c.g,c.b,3.5*3/this.count);
   }
  }
  render(renderer){
